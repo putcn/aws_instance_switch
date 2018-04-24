@@ -30,7 +30,7 @@ parser.add_argument(
     '--action',
     type=str,
     required=True,
-    help="start|stop|reboot")
+    help="start|stop|reboot|status")
 
 parser.add_argument(
     '--region',
@@ -98,8 +98,12 @@ if __name__ == "__main__":
             InstanceIds = instances_parameter
         )
         if len(response["StoppingInstances"]) > 0:
-            print("Instance is stopping, might take several minutes to stop completely")
-
+            print("Instance is stopping, might take several minutes to stop completely...")
+        stop_waiter = ec2client.get_waiter('instance_stopped')
+        stop_waiter.wait(
+            InstanceIds = instances_parameter,
+        )
+        print("Instance stopped")
     elif args.action == "reboot":
         response = ec2client.reboot_instances(
             InstanceIds = instances_parameter
@@ -111,6 +115,11 @@ if __name__ == "__main__":
         key_pair_name = instance_info["KeyName"]
         print("connect to instance with the command as follows:")
         print("ssh -i " + key_pair_name + ".pem ubuntu@" + pub_ip)
+    elif args.action == "status":
+        instance_info = ec2client.describe_instances(
+            InstanceIds = instances_parameter
+        )
+        print(instance_info["Reservations"][0]["Instances"][0]["State"]["Name"])
     else:
         raise ValueError("action must be one of start|stop|reboot")
 
